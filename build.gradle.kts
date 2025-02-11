@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "cc.wenmin92.jsonpathnavigator"
-version = "1.0.2"
+version = "1.0.5"
 
 // Set the JVM language level used to build the project.
 kotlin {
@@ -116,10 +116,12 @@ changelog {
 }
 
 // Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-koverReport {
-    defaults {
-        xml {
-            onCheck = true
+kover {
+    reports {
+        total {
+            xml {
+                onCheck = true
+            }
         }
     }
 }
