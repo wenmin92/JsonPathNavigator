@@ -17,11 +17,13 @@
 - [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
 
 <!-- Plugin description -->
-This Fancy IntelliJ Platform Plugin is going to be your implementation of the brilliant ideas that you have.
-
-This specific section is a source for the [plugin.xml](/src/main/resources/META-INF/plugin.xml) file which will be extracted by the [Gradle](/build.gradle.kts) during the build process.
-
-To keep everything working, do not remove `<!-- ... -->` sections. 
+A plugin to find JSON keys in your project files.
+Features:
+  - Quick search for JSON keys using keyboard shortcuts
+  - Context menu integration for selected text
+  - Smart suggestions for key names
+  - Preview of found matches with context
+  - Support for nested objects and arrays
 <!-- Plugin description end -->
 
 ## Installation
