@@ -1,18 +1,45 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>com.github.wenmin92.jsonkeyfinder</id>
-    <name>jsonKeyFinder</name>
+    <!-- Unique identifier of the plugin -->
+    <id>cc.wenmin92.jsonpathnavigator</id>
+
+    <!-- Plugin name -->
+    <name>Json Path Navigator</name>
+
+    <!-- Author of the plugin -->
     <vendor>wenmin92</vendor>
 
+    <!-- Description of the plugin -->
+    <description><![CDATA[
+    A plugin to find JSON keys in your project files.<br>
+    Features:
+    <ul>
+        <li>Quick search for JSON keys using keyboard shortcuts</li>
+        <li>Context menu integration for selected text</li>
+        <li>Smart suggestions for key names</li>
+        <li>Preview of found matches with context</li>
+        <li>Support for nested objects and arrays</li>
+    </ul>
+    ]]></description>
+
+    <!-- Product and plugin compatibility requirements -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.java</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.wenmin92.jsonkeyfinder.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-    </extensions>
-
-    <applicationListeners>
-        <listener class="com.github.wenmin92.jsonkeyfinder.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
-    </applicationListeners>
+    <actions>
+        <!-- Add Find JSON Key action -->
+        <action id="JsonPathNavigator.Find"
+                class="cc.wenmin92.jsonkeyfinder.actions.FindJsonKeyAction"
+                text="Find Key in JSON" 
+                description="Search for JSON keys in project files">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift F"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift alt F"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift alt F"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="EditMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

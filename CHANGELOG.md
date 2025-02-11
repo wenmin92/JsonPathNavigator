@@ -1,6 +1,6 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
-# jsonKeyFinder Changelog
+# Json Path Navigator Changelog
 
 ## [Unreleased]
 ### Added
