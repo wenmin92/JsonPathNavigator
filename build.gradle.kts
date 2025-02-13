@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "cc.wenmin92.jsonpathnavigator"
-version = "1.0.5"
+version = "1.0.8"
 
 // Set the JVM language level used to build the project.
 kotlin {

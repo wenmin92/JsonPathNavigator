@@ -4,15 +4,25 @@ import cc.wenmin92.jsonkeyfinder.service.JsonSearchService
 import cc.wenmin92.jsonkeyfinder.service.SearchResult
 import cc.wenmin92.jsonkeyfinder.util.LogUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
+import com.intellij.util.Alarm
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Dimension
@@ -34,8 +44,9 @@ import javax.swing.table.TableRowSorter
 class JsonKeyFinderDialog(
     private val project: Project,
     private val initialSearchText: String? = null
-) : DialogWrapper(project, true) {
+) : DialogWrapper(project, false) {
     private val LOG = LogUtil.getLogger<JsonKeyFinderDialog>()
+    private val updateAlarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, disposable)
 
     private val searchField = JBTextField(initialSearchText ?: "")
     private val searchButton = JButton("Search").apply {
@@ -71,9 +82,13 @@ class JsonKeyFinderDialog(
     init {
         LOG.info("Initializing JSON Key Finder dialog")
         title = "Find JSON Key"
+        isModal = false
         
         // Initialize components
         setupComponents()
+        
+        // Set up change listeners
+        setupChangeListeners()
         
         init()
 
@@ -84,6 +99,73 @@ class JsonKeyFinderDialog(
         } else {
             updateEmptyState(EmptyStateType.INITIAL)
         }
+    }
+
+    private fun setupChangeListeners() {
+        // Set up file system change listener
+        setupFileChangeListener()
+        // Set up document change listener
+        setupDocumentChangeListener()
+    }
+
+    private fun setupFileChangeListener() {
+        val connection = project.messageBus.connect(disposable)
+        connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+            override fun after(events: List<VFileEvent>) {
+                val hasJsonFileChanges = events.any { event ->
+                    event.file?.extension?.equals("json", ignoreCase = true) == true
+                }
+                
+                if (hasJsonFileChanges && !searchField.text.isBlank()) {
+                    LOG.debug("JSON file changes detected, scheduling search update")
+                    scheduleSearchUpdate()
+                }
+            }
+        })
+    }
+
+    private fun setupDocumentChangeListener() {
+        val connection = project.messageBus.connect(disposable)
+        val documentManager = FileDocumentManager.getInstance()
+        
+        // Add document listener to all open JSON files
+        FileEditorManager.getInstance(project).openFiles.forEach { file ->
+            addDocumentListenerToFile(file)
+        }
+
+        // Listen for newly opened files
+        connection.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
+            override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
+                addDocumentListenerToFile(file)
+            }
+        })
+    }
+
+    private fun addDocumentListenerToFile(file: VirtualFile) {
+        if (file.extension?.equals("json", ignoreCase = true) == true) {
+            val document = FileDocumentManager.getInstance().getDocument(file)
+            document?.addDocumentListener(object : DocumentListener {
+                override fun documentChanged(event: DocumentEvent) {
+                    if (!searchField.text.isBlank()) {
+                        LOG.debug("Document changes detected in JSON file: ${file.name}, scheduling search update")
+                        scheduleSearchUpdate()
+                    }
+                }
+            }, disposable)
+        }
+    }
+
+    private fun scheduleSearchUpdate() {
+        updateAlarm.cancelAllRequests()
+        updateAlarm.addRequest({
+            ApplicationManager.getApplication().invokeLater {
+                performSearch()
+            }
+        }, 300) // 300ms delay
+    }
+
+    override fun dispose() {
+        super.dispose()
     }
 
     override fun createCenterPanel(): JComponent {
