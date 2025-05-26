@@ -3,3 +3,5 @@
 .intellijPlatform
 .qodana
 build
+# SpecStory explanation file
+.specstory/.what-is-this.md

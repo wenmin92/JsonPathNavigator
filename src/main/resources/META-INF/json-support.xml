@@ -1,0 +1,3 @@
+<idea-plugin>
+    <!-- This configuration is loaded only when JSON plugin is available -->
+</idea-plugin> 

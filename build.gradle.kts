@@ -1,19 +1,21 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
-import org.jetbrains.intellij.tasks.BuildSearchableOptionsTask
-import org.jetbrains.intellij.tasks.RunIdeTask
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask
+import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
+import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 
 plugins {
     id("java") // Java support
     id("org.jetbrains.kotlin.jvm") // Kotlin support
-    id("org.jetbrains.intellij") // IntelliJ Platform Gradle Plugin
+    id("org.jetbrains.intellij.platform") version "2.6.0" // IntelliJ Platform Gradle Plugin 2.x
     id("org.jetbrains.changelog") // Gradle Changelog Plugin
     id("org.jetbrains.qodana") // Gradle Qodana Plugin
     id("org.jetbrains.kotlinx.kover") // Gradle Kover Plugin
 }
 
 group = "cc.wenmin92.jsonpathnavigator"
-version = "1.0.8"
+version = project.property("pluginVersion") as String
 
 // Set the JVM language level used to build the project.
 kotlin {
@@ -23,6 +25,9 @@ kotlin {
 // Configure project's dependencies
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
@@ -30,20 +35,37 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    
+    intellijPlatform {
+        create(IntelliJPlatformType.IntellijIdeaCommunity, project.property("platformVersion") as String)
+        bundledPlugins((project.property("platformBundledPlugins") as String).split(',').map(String::trim).filter(String::isNotEmpty))
+
+        
+        pluginVerifier()
+        zipSigner()
+    }
 }
 
-// Configure IntelliJ Plugin
-intellij {
-    version.set(providers.gradleProperty("platformVersion"))
-    type.set(providers.gradleProperty("platformType"))
+// Configure IntelliJ Platform Plugin Verification
+intellijPlatform {
+    pluginVerification {
+        ides {
+            // 使用当前项目配置的 IDE 版本进行验证
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, project.property("platformVersion") as String)
+            
+            // 验证一个较新的版本（避免网络问题，可以根据需要启用）
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
 
-    // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-    plugins.set(providers.gradleProperty("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) })
+            // 验证最新的推荐版本
+            // recommended()
+
+        }
+    }
 }
 
 tasks {
     wrapper {
-        gradleVersion = providers.gradleProperty("gradleVersion").get()
+        gradleVersion = project.property("gradleVersion") as String
     }
 
     withType<BuildSearchableOptionsTask>().configureEach {
@@ -51,12 +73,14 @@ tasks {
     }
 
     patchPluginXml {
-        version.set(providers.gradleProperty("pluginVersion"))
-        sinceBuild.set(providers.gradleProperty("pluginSinceBuild"))
-        untilBuild.set(providers.gradleProperty("pluginUntilBuild"))
+        version = project.property("pluginVersion") as String
+        sinceBuild = project.property("pluginSinceBuild") as String
+        if (project.hasProperty("pluginUntilBuild")) {
+            untilBuild = project.property("pluginUntilBuild") as String
+        }
 
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
-        pluginDescription.set(providers.fileContents(layout.projectDirectory.file("README.md")).asText.map {
+        pluginDescription = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map {
             val start = "<!-- Plugin description -->"
             val end = "<!-- Plugin description end -->"
 
@@ -66,30 +90,28 @@ tasks {
                 }
                 subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
             }
-        })
+        }
 
         val changelog = project.changelog // local variable for configuration cache compatibility
         // Get the latest available change notes from the changelog file
-        changeNotes.set(providers.gradleProperty("pluginVersion").map { pluginVersion ->
-            with(changelog) {
-                renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased())
-                        .withHeader(false)
-                        .withEmptySections(false),
-                    Changelog.OutputType.HTML,
-                )
-            }
-        })
+        changeNotes = with(changelog) {
+            renderItem(
+                (getOrNull(project.property("pluginVersion") as String) ?: getUnreleased())
+                    .withHeader(false)
+                    .withEmptySections(false),
+                Changelog.OutputType.HTML,
+            )
+        }
     }
 
     signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
+        certificateChain = System.getenv("CERTIFICATE_CHAIN")
+        privateKey = System.getenv("PRIVATE_KEY")
+        password = System.getenv("PRIVATE_KEY_PASSWORD")
     }
 
     publishPlugin {
-        token.set(System.getenv("PUBLISH_TOKEN"))
+        token = System.getenv("PUBLISH_TOKEN")
     }
 
     test {
@@ -97,7 +119,6 @@ tasks {
     }
 
     withType<RunIdeTask> {
-        autoReloadPlugins.set(true)
         jvmArgs("-Xmx2g")
         // IDE VM options
         jvmArgs(
@@ -107,12 +128,31 @@ tasks {
             "-Djb.consents.confirmation.enabled=false"
         )
     }
+    
+    // 创建一个任务来验证最新版本
+    register("verifyPluginLatest") {
+        group = "verification"
+        description = "验证插件与最新 IDE 版本的兼容性"
+        
+        doLast {
+            println("=".repeat(60))
+            println("验证最新 IDE 版本的说明:")
+            println("=".repeat(60))
+            println("1. 在 build.gradle.kts 中取消注释以下行:")
+            println("   // ide(IntelliJPlatformType.IntellijIdeaCommunity, \"2024.2.6\")")
+            println("2. 或者添加其他版本，如:")
+            println("   ide(IntelliJPlatformType.IntellijIdeaCommunity, \"2024.3.5\")")
+            println("3. 然后运行: ./gradlew verifyPlugin")
+            println("=".repeat(60))
+            println("注意: 首次下载新版本 IDE 可能需要较长时间")
+        }
+    }
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
     groups.empty()
-    repositoryUrl.set(providers.gradleProperty("pluginRepositoryUrl"))
+    repositoryUrl = project.property("pluginRepositoryUrl") as String
 }
 
 // Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
