@@ -46,7 +46,7 @@ dependencies {
     // JUnit 4 for IntelliJ Platform Test Framework (BasePlatformTestCase uses JUnit 4)
     testImplementation("junit:junit:4.13.2")
     // JUnit 5 for standalone unit tests
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // JUnit Vintage for running JUnit 4 tests with JUnit 5 runner
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")
