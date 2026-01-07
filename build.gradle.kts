@@ -49,7 +49,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // JUnit Vintage for running JUnit 4 tests with JUnit 5 runner
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.0.2")
     
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdeaCommunity, project.property("platformVersion") as String)
