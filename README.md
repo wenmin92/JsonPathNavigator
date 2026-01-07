@@ -1,53 +1,209 @@
 # Json Path Navigator
 
 ![Build](https://github.com/wenmin92/JsonPathNavigator/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
+[![Version](https://img.shields.io/jetbrains/plugin/v/cc.wenmin92.jsonpathnavigator.svg)](https://plugins.jetbrains.com/plugin/cc.wenmin92.jsonpathnavigator)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/cc.wenmin92.jsonpathnavigator.svg)](https://plugins.jetbrains.com/plugin/cc.wenmin92.jsonpathnavigator)
 
-## Template ToDo list
-- [x] Create a new [IntelliJ Platform Plugin Template][template] project.
-- [x] Get familiar with the [template documentation][template].
-- [ ] Adjust the [pluginGroup](./gradle.properties) and [pluginName](./gradle.properties), as well as the [id](./src/main/resources/META-INF/plugin.xml) and [sources package](./src/main/kotlin).
-- [ ] Adjust the plugin description in `README` (see [Tips][docs:plugin-description])
-- [ ] Review the [Legal Agreements](https://plugins.jetbrains.com/docs/marketplace/legal-agreements.html?from=IJPluginTemplate).
-- [ ] [Publish a plugin manually](https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate) for the first time.
-- [ ] Set the `MARKETPLACE_ID` in the above README badges. You can obtain it once the plugin is published to JetBrains Marketplace.
-- [ ] Set the [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate) related [secrets](https://github.com/JetBrains/intellij-platform-plugin-template#environment-variables).
-- [ ] Set the [Deployment Token](https://plugins.jetbrains.com/docs/marketplace/plugin-upload.html?from=IJPluginTemplate).
-- [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
+> 🔍 一个帮助你在项目中快速查找 JSON 键的 JetBrains IDE 插件
+>
+> A JetBrains IDE plugin for quickly finding JSON keys in your project
 
 <!-- Plugin description -->
-A plugin to find JSON keys in your project files.
-Features:
-  - Quick search for JSON keys using keyboard shortcuts
-  - Context menu integration for selected text
-  - Smart suggestions for key names
-  - Preview of found matches with context
-  - Support for nested objects and arrays
+A JetBrains IDE plugin for quickly finding JSON keys in your project.
+
+**Features:**
+- 🔍 **Quick Search** - Locate JSON keys by path instantly
+- 💡 **Smart Suggestions** - Auto-suggest paths as you type
+- 👁️ **Value Preview** - Show value preview of matches
+- 📍 **One-Click Navigation** - Double-click to jump to file location
+- 🖱️ **Context Menu** - Right-click selected text to search
+- ⌨️ **Smart Selection** - Auto-detect JSON path at cursor position
+
+**Usage:** Press `Ctrl+Alt+Shift+F` (Windows/Linux) or `⌘+⇧+⌥+F` (macOS) to open the search dialog.
 <!-- Plugin description end -->
 
-## Installation
+---
 
-- Using the IDE built-in plugin system:
-  
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "Json Path Navigator"</kbd> >
-  <kbd>Install</kbd>
-  
-- Using JetBrains Marketplace:
+## ✨ 功能特性 / Features
 
-  Go to [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID) and install it by clicking the <kbd>Install to ...</kbd> button in case your IDE is running.
-
-  You can also download the [latest release](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID/versions) from JetBrains Marketplace and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
-
-- Manually:
-
-  Download the [latest release](https://github.com/wenmin92/JsonPathNavigator/releases/latest) and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
-
+| 功能 | Feature | 说明 / Description |
+|------|---------|-------------------|
+| 🔍 快速搜索 | Quick Search | 通过键路径快速定位 JSON 键 / Quickly locate JSON keys by path |
+| 💡 智能建议 | Smart Suggestions | 输入时自动提示可能的路径 / Auto-suggest paths as you type |
+| 👁️ 值预览 | Value Preview | 显示匹配项的值预览 / Show value preview of matches |
+| 📍 一键跳转 | One-Click Navigation | 双击结果直接跳转到文件位置 / Double-click to jump to file |
+| 🖱️ 右键菜单 | Context Menu | 选中文本后右键即可搜索 / Right-click selected text to search |
+| ⌨️ 智能取词 | Smart Selection | 自动识别光标处的 JSON 路径 / Auto-detect JSON path at cursor |
 
 ---
-Plugin based on the [IntelliJ Platform Plugin Template][template].
 
-[template]: https://github.com/JetBrains/intellij-platform-plugin-template
-[docs:plugin-description]: https://plugins.jetbrains.com/docs/intellij/plugin-user-experience.html#plugin-description-and-presentation
+## ⚡ 快速开始 / Quick Start
+
+### 🎯 3 种方式打开搜索对话框 / 3 Ways to Open Search Dialog
+
+| 方式 / Method | 操作 / Action |
+|--------------|--------------|
+| **⌨️ 快捷键** | Windows/Linux: `Ctrl + Alt + Shift + F`<br>macOS: `⌘ + ⇧ + ⌥ + F` |
+| **🖱️ 右键菜单** | 选中文本 → 右键 → **Find Key in JSON** |
+| **📋 Edit 菜单** | 菜单栏 → Edit → **Find Key in JSON** |
+
+### 📖 基本使用流程 / Basic Usage
+
+```
+1️⃣ 按下 Ctrl+Alt+Shift+F 打开搜索对话框
+   Press Ctrl+Alt+Shift+F to open search dialog
+
+2️⃣ 输入要搜索的 JSON 键路径，如：database.host
+   Enter JSON key path, e.g.: database.host
+
+3️⃣ 查看搜索结果，双击跳转到对应文件位置
+   View results, double-click to navigate to file
+```
+
+### 🎹 对话框内快捷键 / Dialog Shortcuts
+
+| 操作 / Action | 快捷键 / Shortcut |
+|--------------|------------------|
+| 执行搜索 / Search | `Enter` |
+| 关闭对话框 / Close | `Esc` |
+| 跳转到结果 / Navigate | 双击结果行 / Double-click |
+
+---
+
+## 📝 搜索语法 / Search Syntax
+
+使用 `.` (点) 分隔嵌套的键名 / Use `.` (dot) to separate nested keys:
+
+```
+简单键 / Simple key:        name
+嵌套路径 / Nested path:     config.database.host
+多层嵌套 / Deep nesting:    app.settings.ui.theme
+```
+
+### 示例 / Example
+
+对于以下 JSON / For this JSON:
+```json
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432
+  }
+}
+```
+
+| 搜索路径 / Search Path | 找到 / Found |
+|----------------------|--------------|
+| `database.host` | `"localhost"` |
+| `database.port` | `5432` |
+
+---
+
+## 💻 支持的 IDE / Supported IDEs
+
+- IntelliJ IDEA (Community & Ultimate)
+- WebStorm
+- PyCharm
+- GoLand
+- PhpStorm
+- Rider
+- CLion
+- 其他 JetBrains IDE (2024.1+) / Other JetBrains IDEs (2024.1+)
+
+---
+
+## 📦 安装方法 / Installation
+
+### 方法一：从 IDE 插件市场安装（推荐）/ Method 1: IDE Marketplace (Recommended)
+
+1. 打开设置 / Open Settings
+   - Windows/Linux: `File` → `Settings` → `Plugins`
+   - macOS: `IntelliJ IDEA` → `Preferences` → `Plugins`
+
+2. 点击 `Marketplace` 标签，搜索 **"Json Path Navigator"**
+   Click `Marketplace` tab, search for **"Json Path Navigator"**
+
+3. 点击 `Install`，然后重启 IDE
+   Click `Install`, then restart IDE
+
+### 方法二：手动安装 / Method 2: Manual Installation
+
+1. 从 [GitHub Releases](https://github.com/wenmin92/JsonPathNavigator/releases) 下载 `.zip` 文件
+   Download `.zip` from [GitHub Releases](https://github.com/wenmin92/JsonPathNavigator/releases)
+
+2. 打开 IDE 设置 → `Plugins` → ⚙️ → `Install Plugin from Disk...`
+   Open IDE Settings → `Plugins` → ⚙️ → `Install Plugin from Disk...`
+
+3. 选择下载的文件，重启 IDE
+   Select downloaded file, restart IDE
+
+---
+
+## ⚙️ 自定义快捷键 / Customize Shortcuts
+
+如果默认快捷键与其他插件冲突，可以自定义：
+
+If the default shortcut conflicts with other plugins:
+
+1. 打开设置 → `Keymap`
+   Open Settings → `Keymap`
+
+2. 搜索 **"Find Key in JSON"**
+   Search for **"Find Key in JSON"**
+
+3. 右键 → `Add Keyboard Shortcut` → 输入新快捷键
+   Right-click → `Add Keyboard Shortcut` → Enter new shortcut
+
+---
+
+## 📚 详细文档 / Documentation
+
+- [中文用户指南](docs/USER_GUIDE_CN.md) - 完整的功能说明和使用技巧
+- [English User Guide](docs/USER_GUIDE_EN.md) - Complete features and tips
+- [开发文档](docs/DEVELOPMENT.md) - 开发者指南
+
+---
+
+## ❓ 常见问题 / FAQ
+
+<details>
+<summary><b>Q: 搜索没有结果？/ No search results?</b></summary>
+
+1. 检查键名拼写（大小写敏感）/ Check spelling (case-sensitive)
+2. 使用完整路径，如 `config.host` 而非 `host` / Use full path
+3. 确保文件扩展名是 `.json` / Ensure file extension is `.json`
+4. 确保文件在项目目录内 / Ensure file is in project
+
+</details>
+
+<details>
+<summary><b>Q: 支持 JSON5/JSONC 吗？/ Support JSON5/JSONC?</b></summary>
+
+目前只支持标准 JSON 格式。/ Currently only standard JSON is supported.
+
+</details>
+
+<details>
+<summary><b>Q: 能搜索数组元素吗？/ Search array elements?</b></summary>
+
+暂不支持数组索引，如 `items[0].name`。/ Array indexing like `items[0].name` is not supported yet.
+
+</details>
+
+---
+
+## 🤝 反馈与贡献 / Feedback & Contributing
+
+- **🐛 问题反馈 / Bug Reports**: [GitHub Issues](https://github.com/wenmin92/JsonPathNavigator/issues)
+- **💡 功能建议 / Feature Requests**: [GitHub Discussions](https://github.com/wenmin92/JsonPathNavigator/discussions)
+- **⭐ 如果觉得有用，欢迎 Star！/ Star if you find it useful!**
+
+---
+
+## 📄 License
+
+Apache License 2.0
+
+---
+
+*Made with ❤️ by [wenmin92](https://github.com/wenmin92)*
