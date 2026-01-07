@@ -1,0 +1,34 @@
+{
+    "application": {
+        "name": "JsonPathNavigator",
+        "settings": {
+            "theme": "dark",
+            "language": "zh-CN",
+            "notifications": {
+                "email": true,
+                "push": false
+            }
+        },
+        "features": {
+            "search": {
+                "enabled": true,
+                "maxResults": 100,
+                "timeout": 5000
+            },
+            "cache": {
+                "enabled": true,
+                "ttl": 3600
+            }
+        }
+    },
+    "users": {
+        "admin": {
+            "email": "admin@example.com",
+            "role": "administrator"
+        },
+        "guest": {
+            "email": "guest@example.com",
+            "role": "viewer"
+        }
+    }
+}
