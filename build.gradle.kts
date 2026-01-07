@@ -8,7 +8,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 plugins {
     id("java") // Java support
     id("org.jetbrains.kotlin.jvm") // Kotlin support
-    id("org.jetbrains.intellij.platform") version "2.6.0" // IntelliJ Platform Gradle Plugin 2.x
+    id("org.jetbrains.intellij.platform") version "2.10.5" // IntelliJ Platform Gradle Plugin 2.x
     id("org.jetbrains.changelog") // Gradle Changelog Plugin
     id("org.jetbrains.qodana") // Gradle Qodana Plugin
     id("org.jetbrains.kotlinx.kover") // Gradle Kover Plugin
