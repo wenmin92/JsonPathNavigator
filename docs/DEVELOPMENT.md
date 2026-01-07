@@ -591,29 +591,48 @@ fun myMethod() {
 
 ## 8. 发布流程
 
-### 8.1 版本更新
+> **📖 完整发布指南**: 请查看 [RELEASE.md](RELEASE.md) 获取详细的发布流程、配置说明和问题解决方案。
 
-1. 更新 `gradle.properties`:
-```properties
-pluginVersion=1.1.0
-```
+### 8.1 快速发布步骤
 
-2. 更新 `CHANGELOG.md`
+1. **更新版本**:
+   ```properties
+   # gradle.properties
+   pluginVersion=1.0.11
+   ```
 
-### 8.2 构建发布包
+2. **更新 CHANGELOG.md**:
+   ```markdown
+   ## [1.0.11] - 2026-01-07
+   ### Added
+   - 新功能
+   ```
 
-```powershell
+3. **提交并推送**:
+   ```bash
+   git add gradle.properties CHANGELOG.md
+   git commit -m "chore: bump version to 1.0.11"
+   git push origin main
+   ```
+
+4. **等待 GitHub Actions** 构建完成
+
+5. **发布 Release**: 
+   - 访问 https://github.com/wenmin92/JsonPathNavigator/releases
+   - 找到 Draft release 并点击 **Publish**
+
+6. **验证**: 检查 JetBrains Marketplace 更新
+
+### 8.2 手动构建（本地测试）
+
+```bash
+# 构建插件
 .\gradlew.bat buildPlugin
+
+# 输出: build/distributions/jsonpathnavigator-{version}.zip
 ```
 
-输出: `build/distributions/jsonpathnavigator-1.1.0.zip`
-
-### 8.3 发布到 JetBrains Marketplace
-
-```powershell
-# 需要设置 PUBLISH_TOKEN 环境变量
-.\gradlew.bat publishPlugin
-```
+**详细说明**: 参见 [RELEASE.md](RELEASE.md)
 
 ---
 

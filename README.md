@@ -158,9 +158,13 @@ If the default shortcut conflicts with other plugins:
 
 ## 📚 详细文档 / Documentation
 
+**用户文档 / User Docs:**
 - [中文用户指南](docs/USER_GUIDE_CN.md) - 完整的功能说明和使用技巧
 - [English User Guide](docs/USER_GUIDE_EN.md) - Complete features and tips
-- [开发文档](docs/DEVELOPMENT.md) - 开发者指南
+
+**开发者文档 / Developer Docs:**
+- [开发文档](docs/DEVELOPMENT.md) - 开发者指南和架构说明
+- [发布指南](docs/RELEASE.md) - 插件发布流程和问题解决
 
 ---
 
