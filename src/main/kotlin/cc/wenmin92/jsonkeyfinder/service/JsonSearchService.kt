@@ -6,6 +6,7 @@ import com.intellij.json.psi.JsonFile
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonValue
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -149,17 +150,25 @@ class JsonSearchService(private val project: Project) {
     }
 
     fun isValidRootProperty(propertyName: String): Boolean {
-        return ReadAction.computeCancellable<Boolean, Throwable> {
-            val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
-            for (file in jsonFiles) {
-                val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
-                val rootObject = psiFile.topLevelValue as? JsonObject ?: continue
-                if (rootObject.propertyList.any { it.name == propertyName }) {
-                    return@computeCancellable true
-                }
+        return if (ApplicationManager.getApplication().isReadAccessAllowed) {
+            computeIsValidRootProperty(propertyName)
+        } else {
+            ReadAction.computeCancellable<Boolean, Throwable> {
+                computeIsValidRootProperty(propertyName)
             }
-            false
         }
+    }
+
+    private fun computeIsValidRootProperty(propertyName: String): Boolean {
+        val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+        for (file in jsonFiles) {
+            val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
+            val rootObject = psiFile.topLevelValue as? JsonObject ?: continue
+            if (rootObject.propertyList.any { it.name == propertyName }) {
+                return true
+            }
+        }
+        return false
     }
 
     fun getSuggestions(partialKey: String): List<String> {

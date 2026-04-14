@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-04-14
+
+### Fixed
+- **Test Stability**: Fixed `isValidRootProperty` crashing with `RuntimeExceptionWithAttachments` when called from the EDT (e.g., in unit tests); `ReadAction.computeCancellable` is only valid on background threads
+- **API Compatibility**: Replaced deprecated `ReadAction.compute` with a proper `isReadAccessAllowed` guard: runs directly when read access is already held (EDT / test context), otherwise delegates to `ReadAction.computeCancellable` on background threads
+
 ## [1.0.12] - 2026-04-14
 
 ### Fixed
@@ -117,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.0.13]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.13
 [1.0.12]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.12
 [1.0.11]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.11
 [1.0.10]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.10
