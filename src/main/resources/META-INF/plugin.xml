@@ -27,9 +27,12 @@ https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
     <depends>com.intellij.modules.json</depends>
-    <depends optional="true" config-file="json-support.xml">org.jetbrains.plugins.json</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="cc.wenmin92.jsonkeyfinder.service.JsonIndexWarmupActivity" />
+    </extensions>
 
     <actions>
         <!-- Add Find JSON Key action -->

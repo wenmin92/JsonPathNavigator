@@ -5,6 +5,30 @@ import org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 
+fun resolveIdeType(version: String): IntelliJPlatformType {
+    val major = version.substringBefore(".").toIntOrNull() ?: 0
+    val minor = version.substringAfter(".").substringBefore(".").toIntOrNull() ?: 0
+    return if (major > 2025 || (major == 2025 && minor >= 3)) {
+        IntelliJPlatformType.IntellijIdeaUltimate
+    } else {
+        IntelliJPlatformType.IntellijIdeaCommunity
+    }
+}
+
+/**
+ * 自 2024.3 起 JSON 语言支持从平台核心拆成独立 bundled plugin，编译时必须把 [com.intellij.modules.json]
+ * 加入 Gradle 的 bundledPlugins，否则 com.intellij.json.* 不在 classpath（见 API Changes 2024.3）。
+ * 2024.1/2024.2 仍内嵌在平台 SDK 中，显式添加会解析失败，故按版本区分。
+ */
+fun needsExplicitJsonBundledPlugin(platformVersion: String): Boolean {
+    val parts = platformVersion.trim().split(".")
+    if (parts.size < 2) return false
+    val year = parts[0].toIntOrNull() ?: return false
+    val minor = parts[1].toIntOrNull() ?: return false
+    if (year > 2024) return true
+    return year == 2024 && minor >= 3
+}
+
 plugins {
     id("java") // Java support
     id("org.jetbrains.kotlin.jvm") // Kotlin support
@@ -52,8 +76,24 @@ dependencies {
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")
     
     intellijPlatform {
-        create(IntelliJPlatformType.IntellijIdeaCommunity, project.property("platformVersion") as String)
-        bundledPlugins((project.property("platformBundledPlugins") as String).split(',').map(String::trim).filter(String::isNotEmpty))
+        val localIdePath = (project.findProperty("platformLocalPath") as? String)?.trim().orEmpty()
+        val pv = project.property("platformVersion") as String
+        if (localIdePath.isNotEmpty()) {
+            // 使用本机已安装的 IDE，避免 Gradle 从 CDN 下载大体积安装包（参见 docs/TESTING.md）
+            local(localIdePath)
+        } else {
+            create(resolveIdeType(pv), pv)
+        }
+        val baseBundled = (project.property("platformBundledPlugins") as String)
+            .split(',')
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+        val bundled = if (localIdePath.isEmpty() && needsExplicitJsonBundledPlugin(pv)) {
+            (baseBundled + "com.intellij.modules.json").distinct()
+        } else {
+            baseBundled
+        }
+        bundledPlugins(bundled)
 
         
         pluginVerifier()
@@ -66,15 +106,13 @@ dependencies {
 intellijPlatform {
     pluginVerification {
         ides {
-            // 使用当前项目配置的 IDE 版本进行验证
-            ide(IntelliJPlatformType.IntellijIdeaCommunity, project.property("platformVersion") as String)
-            
-            // 验证一个较新的版本（避免网络问题，可以根据需要启用）
+            val pv = project.property("platformVersion") as String
+            ide(resolveIdeType(pv), pv)
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
             ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
-
-            // 验证最新的推荐版本
-            // recommended()
-
+            // 2025.3+ 使用统一发行版 (IU)，不再有独立的 Community Edition
+            ide(IntelliJPlatformType.IntellijIdeaUltimate, "2025.3")
+            ide(IntelliJPlatformType.IntellijIdeaUltimate, "2026.1")
         }
     }
 }
@@ -120,6 +158,17 @@ tasks {
         }
     }
 
+    runIde {
+        // Disable all instrumentation agents to prevent ClassNotFoundException
+        jvmArgumentProviders += CommandLineArgumentProvider {
+            listOf(
+                "-Dkotlinx.coroutines.debug=off",
+                "-Djava.instrument.debug=false",
+                "-Xnoagent"
+            )
+        }
+    }
+
     signPlugin {
         certificateChain = System.getenv("CERTIFICATE_CHAIN")
         privateKey = System.getenv("PRIVATE_KEY")
@@ -132,15 +181,6 @@ tasks {
 
     test {
         useJUnitPlatform()
-        // Temporarily disabled until test framework dependencies are properly configured
-        enabled = false
-    }
-    
-    // Temporarily disable test compilation until dependencies are fixed
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        if (name.contains("Test")) {
-            enabled = false
-        }
     }
 
     withType<RunIdeTask> {

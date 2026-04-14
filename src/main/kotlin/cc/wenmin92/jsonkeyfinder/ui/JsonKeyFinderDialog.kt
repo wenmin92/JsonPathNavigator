@@ -4,6 +4,10 @@ import cc.wenmin92.jsonkeyfinder.service.JsonSearchService
 import cc.wenmin92.jsonkeyfinder.service.SearchResult
 import cc.wenmin92.jsonkeyfinder.util.LogUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.ReadAction
+import com.intellij.util.concurrency.AppExecutorUtil
+import java.util.concurrent.Callable
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -76,7 +80,8 @@ class JsonKeyFinderDialog(
     private val suggestionModel = DefaultListModel<String>()
     private val suggestionLabel = JBLabel("", SwingConstants.CENTER)
     private var lastSearchResults = listOf<SearchResult>()
-    private var isInitialSearchDone = false
+    @Volatile
+    private var isCancelled = false
     private lateinit var scrollPane: JBScrollPane
 
     init {
@@ -94,8 +99,7 @@ class JsonKeyFinderDialog(
 
         // If there is initial search text, perform search
         if (!initialSearchText.isNullOrBlank()) {
-            LOG.debug("Performing initial search")
-            performInitialSearch()
+            performSearch()
         } else {
             updateEmptyState(EmptyStateType.INITIAL)
         }
@@ -165,6 +169,7 @@ class JsonKeyFinderDialog(
     }
 
     override fun dispose() {
+        isCancelled = true
         super.dispose()
     }
 
@@ -187,48 +192,6 @@ class JsonKeyFinderDialog(
 
     override fun getDimensionServiceKey(): String {
         return "JsonKeyFinder.Dialog"
-    }
-
-    /**
-     * Perform initial search.
-     * Execute before showing the dialog to ensure search results are visible when the dialog opens.
-     */
-    private fun performInitialSearch() {
-        val searchText = initialSearchText ?: return
-        LOG.info("Performing initial search for: $searchText")
-
-        try {
-            // Execute search directly in current thread since this is initialization phase
-            val results = searchService.findKey(searchText)
-            lastSearchResults = results
-            LOG.debug("Initial search completed, found ${results.size} results")
-
-            // Add results to table
-            results.forEach { result ->
-                LOG.trace("Adding initial result: ${result.file.name} - ${result.path}")
-                model.addRow(
-                    arrayOf(
-                        result.file.name,
-                        result.path,
-                        result.preview,
-                        result.lineNumber
-                    )
-                )
-            }
-
-            // If there are results, select the first row
-            if (results.isNotEmpty()) {
-                resultsTable.selectionModel.setSelectionInterval(0, 0)
-            }
-
-            // Update dialog title to show result count
-            title = "Find JSON Key - ${results.size} results found"
-
-            isInitialSearchDone = true
-        } catch (e: Exception) {
-            LOG.error("Error during initial search", e)
-            title = "Find JSON Key - Initial search failed"
-        }
     }
 
     /**
@@ -469,29 +432,29 @@ class JsonKeyFinderDialog(
             }
         }
 
-        ApplicationManager.getApplication().executeOnPooledThread {
-            try {
-                // Use ReadAction to wrap search operation
-                val results = ApplicationManager.getApplication().runReadAction<List<SearchResult>> {
-                    searchService.findKey(searchText)
-                }
+        ReadAction.nonBlocking(Callable { searchService.findKey(searchText) })
+            .inSmartMode(project)
+            .expireWhen { isCancelled }
+            .finishOnUiThread(ModalityState.any()) { results ->
+                if (isCancelled) return@finishOnUiThread
                 lastSearchResults = results
                 LOG.debug("Search completed, found ${results.size} results")
-
-                SwingUtilities.invokeLater {
-                    updateSearchResults(results)
-                    val panel = scrollPane.parent as JPanel
-                    val layout = panel.layout as CardLayout
-                    if (results.isEmpty()) {
-                        updateEmptyState(EmptyStateType.NO_RESULTS)
-                        layout.show(panel, "empty")
-                    } else {
-                        layout.show(panel, "results")
-                    }
+                updateSearchResults(results)
+                val panel = scrollPane.parent as JPanel
+                val layout = panel.layout as CardLayout
+                if (results.isEmpty()) {
+                    updateEmptyState(EmptyStateType.NO_RESULTS)
+                    layout.show(panel, "empty")
+                } else {
+                    layout.show(panel, "results")
                 }
-            } catch (e: Exception) {
+            }
+            .submit(AppExecutorUtil.getAppExecutorService())
+            .onError { e ->
+                if (isCancelled) return@onError
                 LOG.error("Error during search operation", e)
-                SwingUtilities.invokeLater {
+                ApplicationManager.getApplication().invokeLater {
+                    if (isCancelled) return@invokeLater
                     title = "Find JSON Key - Search failed"
                     updateEmptyState(EmptyStateType.NO_RESULTS)
                     (scrollPane.parent as JPanel).let { panel ->
@@ -499,7 +462,6 @@ class JsonKeyFinderDialog(
                     }
                 }
             }
-        }
     }
 
     /**
@@ -517,7 +479,7 @@ class JsonKeyFinderDialog(
             results.forEach { result ->
                 LOG.trace("Adding result: ${result.file.name} - ${result.path}")
                 model.addRow(
-                    arrayOf(
+                    arrayOf<Any>(
                         result.file.name,
                         result.path,
                         result.preview,
@@ -557,38 +519,34 @@ class JsonKeyFinderDialog(
             return
         }
 
-        ApplicationManager.getApplication().executeOnPooledThread {
-            try {
-                val suggestions = searchService.getSuggestions(partialKey)
-                LOG.debug("Got ${suggestions.size} suggestions")
-
-                SwingUtilities.invokeLater {
-                    try {
-                        suggestionModel.clear()
-                        suggestions.forEach {
-                            LOG.trace("Adding suggestion: $it")
-                            suggestionModel.addElement(it)
-                        }
-
-                        // Update suggestion list state
-                        if (suggestions.isEmpty()) {
-                            updateSuggestionState(SuggestionStateType.NO_SUGGESTIONS)
-                        } else {
-                            updateSuggestionState(SuggestionStateType.HAS_SUGGESTIONS)
-                            suggestionList.selectedIndex = 0
-                        }
-                    } catch (e: Exception) {
-                        LOG.error("Error updating suggestions list", e)
-                        updateSuggestionState(SuggestionStateType.ERROR)
+        ReadAction.nonBlocking(Callable { searchService.getSuggestions(partialKey) })
+            .inSmartMode(project)
+            .expireWhen { isCancelled }
+            .finishOnUiThread(ModalityState.any()) { suggestions ->
+                if (isCancelled) return@finishOnUiThread
+                try {
+                    suggestionModel.clear()
+                    suggestions.forEach { suggestionModel.addElement(it) }
+                    if (suggestions.isEmpty()) {
+                        updateSuggestionState(SuggestionStateType.NO_SUGGESTIONS)
+                    } else {
+                        updateSuggestionState(SuggestionStateType.HAS_SUGGESTIONS)
+                        suggestionList.selectedIndex = 0
                     }
-                }
-            } catch (e: Exception) {
-                LOG.error("Error getting suggestions", e)
-                SwingUtilities.invokeLater {
+                } catch (e: Exception) {
+                    LOG.error("Error updating suggestions list", e)
                     updateSuggestionState(SuggestionStateType.ERROR)
                 }
             }
-        }
+            .submit(AppExecutorUtil.getAppExecutorService())
+            .onError { e ->
+                if (isCancelled) return@onError
+                LOG.error("Error getting suggestions", e)
+                ApplicationManager.getApplication().invokeLater {
+                    if (isCancelled) return@invokeLater
+                    updateSuggestionState(SuggestionStateType.ERROR)
+                }
+            }
     }
 
     /**

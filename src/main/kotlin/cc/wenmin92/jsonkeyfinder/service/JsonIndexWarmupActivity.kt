@@ -21,19 +21,7 @@ import com.intellij.psi.search.GlobalSearchScope
 class JsonIndexWarmupActivity : ProjectActivity {
 
     companion object {
-        // Directories to exclude from warmup (same as JsonSearchService)
-        private val EXCLUDED_DIRS = setOf(
-            "node_modules",
-            ".gradle",
-            "build",
-            "dist",
-            "out",
-            ".idea",
-            "target",
-            ".git",
-            "vendor",
-            "packages"
-        )
+        private val EXCLUDED_DIRS = JsonSearchService.EXCLUDED_DIRS
     }
 
     private val LOG = LogUtil.getLogger<JsonIndexWarmupActivity>()
@@ -43,12 +31,9 @@ class JsonIndexWarmupActivity : ProjectActivity {
      */
     private fun shouldExcludeFile(file: VirtualFile, projectFileIndex: ProjectFileIndex): Boolean {
         if (!projectFileIndex.isInContent(file)) return true
-
         var parent = file.parent
         while (parent != null) {
-            if (EXCLUDED_DIRS.contains(parent.name)) {
-                return true
-            }
+            if (EXCLUDED_DIRS.contains(parent.name)) return true
             parent = parent.parent
         }
         return false

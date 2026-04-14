@@ -11,6 +11,7 @@
 3. [测试结构](#3-测试结构)
 4. [运行测试](#4-运行测试)
 5. [IDE 手动测试 (runIde)](#5-ide-手动测试-runide)
+   - [5.6.1 IDE 构件与下载地址（进阶）](#advanced-ide-artifact-download)
 6. [插件兼容性验证 (verifyPlugin)](#6-插件兼容性验证-verifyplugin)
 7. [编写新测试](#7-编写新测试)
 8. [测试覆盖率](#8-测试覆盖率)
@@ -57,8 +58,14 @@
 
 ### 2.1 环境要求
 
-- **JDK 17** (必需，Gradle 构建和测试运行)
+- **JDK 17** (必需，Gradle 构建和测试运行。不支持更高版本的 JDK)
 - **Gradle 8.10.2** (已包含在项目中，使用 gradlew)
+
+> **Windows 用户注意**：如果系统默认 JDK 不是 17，需要在运行命令前设置 `JAVA_HOME`：
+> ```powershell
+> $env:JAVA_HOME = "C:\path\to\jdk17"
+> ```
+> 或者取消 `gradle.properties` 中 `org.gradle.java.home` 行的注释并设置正确路径。
 
 ### 2.2 运行所有测试
 
@@ -338,7 +345,161 @@ test-plugin/
 # 3. 在代码中设置断点，然后在测试 IDE 中触发功能
 ```
 
-### 5.6 终止测试 IDE
+### 5.6 指定 IDE 版本进行手动测试
+
+默认情况下，`runIde` 使用 `gradle.properties` 中 `platformVersion` 指定的 IDE 版本（当前为 2024.1.7）。要测试其他版本，有两种方式：
+
+**方式 1：命令行参数覆盖（推荐，不修改文件）**
+
+```powershell
+# 使用 IntelliJ IDEA 2024.3 进行测试
+.\gradlew.bat runIde "-PplatformVersion=2024.3"
+
+# 使用 IntelliJ IDEA 2025.1 进行测试
+.\gradlew.bat runIde "-PplatformVersion=2025.1"
+
+# 使用 IntelliJ IDEA 2025.3 进行测试（2025.3 起使用统一发行版）
+.\gradlew.bat runIde "-PplatformVersion=2025.3"
+
+# 使用 IntelliJ IDEA 2026.1 进行测试
+.\gradlew.bat runIde "-PplatformVersion=2026.1"
+```
+
+> **PowerShell 注意**：参数必须加双引号（如 `"-PplatformVersion=2026.1"`），否则 PowerShell 会把版本号中的 `.1` 解析为单独的参数导致报错。
+
+> **2025.3+ 统一发行版**：从 2025.3 开始，IntelliJ IDEA 不再提供独立的 Community Edition 构件，改为统一发行版（Ultimate，但免费功能等同于 Community）。构建脚本已自动处理此切换，无需额外配置。
+
+> **2024.3+ 与 JSON API**：自 2024.3 起，`com.intellij.json.*` 等类来自独立的 bundled plugin，不再随平台 SDK 自动进编译 classpath。本仓库的 `build.gradle.kts` 会在 `platformVersion` 为 2024.3 及更高时**自动**把 `com.intellij.modules.json` 加入 `bundledPlugins`；若你仍看到大量 `Unresolved reference 'json'`，请确认未覆盖掉该逻辑，并检查 `-PplatformVersion` 是否带引号。
+
+> **首次下载**：首次使用新版本时，Gradle 需要下载对应的 IDE（约 500MB-2GB），请耐心等待。下载的 IDE 会被缓存在 `~/.gradle` 中，后续启动会快很多。如果下载卡住，检查 `gradle.properties` 中代理配置是否正确。若要查看**实际下载 URL**、构件命名含义、Gradle 诊断命令与官方文档链接，见 [5.6.1 IDE 构件与下载地址（进阶）](#advanced-ide-artifact-download)。
+
+**下载失败时常见报错（不完整下载）**
+
+若出现类似下面的错误：
+
+```text
+Premature end of Content-Length delimited message body
+(expected: 1,579,722,173; received: 1,206,648,832)
+```
+
+含义是：**HTTP 连接在传完整个文件之前就被断开了**。服务器声明文件大小约 1.58GB，但只收到了约 1.21GB，因此这次下载**无效**，Gradle 不会把不完整的 zip 当作可用缓存。
+
+- **是否下载成功**：没有。必须完整下载后才会解压并缓存。
+- **再次运行为何还会下**：因为上次没有成功写入完整缓存，Gradle 会重新尝试下载；若网络仍不稳定，可能反复失败。
+
+**缓解办法**：配置 HTTP 代理（见本仓库 `gradle.properties` 中 `systemProp.http.proxyHost` 示例）、换网络、或使用下面「本机 IDE 目录」方式完全跳过该次下载。
+
+**方式 1b：使用本机已安装的 IDE（推荐网络差时）**
+
+若你已通过 [JetBrains 官网](https://www.jetbrains.com/idea/download/)、Toolbox 或其他方式**完整安装**了某一版本的 IntelliJ IDEA，可以让 Gradle **直接使用该安装目录**，不再下载 `ideaIU-*.zip`。
+
+1. 在 `gradle.properties` 中设置 `platformLocalPath`，值为 IDE **根目录**（其下应有 `bin`、`lib` 等文件夹）：
+
+   ```properties
+   # Windows 示例（路径按你本机安装位置修改）
+   platformLocalPath=C:/Program Files/JetBrains/IntelliJ IDEA 2026.1
+
+   # macOS 示例
+   # platformLocalPath=/Applications/IntelliJ IDEA.app
+   ```
+
+2. 保存后执行 `.\gradlew.bat runIde`（仍会加载当前工程里的插件到沙盒）。
+
+3. 测完其他版本时，**删除或注释** `platformLocalPath` 一行，即可恢复为按 `platformVersion` 在线解析（或再改 `platformVersion`）。
+
+> **`platformLocalPath` 是 zip 还是解压后的目录？**  
+> 必须是**解压后的 IDE 根目录**（与官网安装版、Toolbox 安装后的目录结构相同：其下有 `bin`、`lib` 等），**不能**填 `.zip` 文件路径。  
+> **Gradle 在线下载**时：由 IntelliJ Platform Gradle Plugin 负责下载并在 Gradle 缓存中处理，**不需要**你手动解压任何 zip。  
+> **若你自行从官网下载了 `ideaIU-*.win.zip`**：需要先**解压到任意目录**，再把 `platformLocalPath` 指向该目录下解压出来的那一层（即能看到 `bin` 的那一层）。
+
+> **说明**：`platformLocalPath` 与 `-PplatformVersion=...` 同时存在时，以本地目录为准（不再为该任务下载对应 zip）。`verifyPlugin` 仍会按 `build.gradle.kts` 里配置的各版本 IDE 做校验，与本地路径无关。
+
+**方式 2：临时修改 `gradle.properties`**
+
+```properties
+# 修改 platformVersion 为目标版本
+platformVersion = 2025.3
+```
+
+修改后运行 `.\gradlew.bat runIde`，测试完成后记得改回原来的版本。
+
+<a id="advanced-ide-artifact-download"></a>
+
+#### 5.6.1 进阶：IDE 构件从哪来、如何查看实际下载地址
+
+新人常在终端里看到类似 `Resolve ... ideaIU-2025.3.win` 的进度，但不清楚**具体从哪个 URL 下载**、**和官网安装包是什么关系**。下面把这些概念串起来，便于自行排查网络问题或对照官方发布物。
+
+**终端里的 `ideaIU-2025.3.win` 表示什么**
+
+- `ideaIU`：IntelliJ IDEA **Ultimate** 产品线对应的平台构件前缀（本仓库在 2025.3+ 使用统一发行版时由 `build.gradle.kts` 中的 `resolveIdeType` 选择 IU 类型）。
+- `2025.3`：你传入的 **发布线版本**（与 `platformVersion` / `-PplatformVersion` 一致）。
+- `.win`：Windows 平台变体。Gradle 与 IntelliJ Platform Gradle Plugin 会据此从 JetBrains 配置的仓库里解析**一个具体的 zip 构件**（完整坐标与构建号由插件与仓库元数据决定，不一定等于你在官网看到的「安装包」文件名）。
+
+**如何得知本次构建实际使用的下载 URL**
+
+Gradle 在默认日志级别下**往往不打印**完整 HTTP 地址，可以用下面方式查看：
+
+1. **加 `--info`（首选）或 `--debug`（更啰嗦）**  
+   在下载阶段日志中查找 **`Downloading https://...`**（或重定向后的最终地址）。示例：
+
+   ```powershell
+   .\gradlew.bat runIde "-PplatformVersion=2025.3" --info
+   ```
+
+2. **用 `dependencyInsight` 看解析结果**（看构件名与版本，辅助对照）：
+
+   ```powershell
+   .\gradlew.bat dependencyInsight --dependency ideaIU --configuration intellijPlatformDependency "-PplatformVersion=2025.3"
+   ```
+
+**与「猜官网直链」的关系**
+
+- 很多 Windows zip 的形态类似 `https://download.jetbrains.com/idea/ideaIU-<版本>.win.zip`，但若 JetBrains 实际发布的是 **补丁线**（如 `2025.3.1`），文件名或路径可能带第三段版本号。
+- **不要仅凭命名规律当作唯一依据**；以 **`--info` 里打印的 URL**、[JetBrains 下载页](https://www.jetbrains.com/idea/download/) 上给出的链接，或仓库元数据为准。
+
+**进一步阅读（官方文档）**
+
+| 主题 | 链接 |
+|------|------|
+| 平台构件与仓库约定 | [IntelliJ Platform Artifacts Repositories](https://plugins.jetbrains.com/docs/intellij/intellij-artifacts.html) |
+| IntelliJ Platform Gradle Plugin 2.x（依赖、`create`、本地 IDE） | [Tools: IntelliJ Platform Gradle Plugin](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html) |
+| `dependencies { intellijPlatform { ... } }` 扩展 | [Dependencies Extension](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html) |
+
+**缓存位置**
+
+- 首次下载成功后，对应 IDE 包会进入 **Gradle 用户目录下的缓存**（Windows 常见为 `C:\Users\<用户名>\.gradle\caches\` 下由插件管理的条目），之后同一 `platformVersion` 会复用，启动会快很多。
+- 若下载**不完整**（例如中途断线），缓存不会被视为可用，下次仍会重新拉取；这与「缓解办法」见本节上文「下载失败时常见报错」。
+
+**完全避免 Gradle 下载 zip**
+
+- 使用上文 **方式 1b：`platformLocalPath`**，指向本机已完整安装的 IDE **解压/安装后的根目录**（不是 `.zip` 文件）；若只有官网下载的 zip，须先解压再填路径。详见方式 1b 下的说明块。
+
+**附：JDK 与 Gradle 的 native 访问警告**
+
+若使用较新的 JDK 运行 Gradle，可能出现 `Restricted method in java.lang.System` / `System::load` 之类**与 native 库加载相关**的警告（例如来自 Gradle 自带的 native 组件）。这通常**与 IDE zip 的下载地址无关**；若需消除警告，可按提示为 JVM 增加 `--enable-native-access=ALL-UNNAMED`，或查阅当前 Gradle / JDK 发行说明。团队规范以公司环境为准。
+
+### 5.7 手动测试的 IDE 版本矩阵
+
+发布新版本前，建议在以下关键版本上进行手动测试：
+
+| IDE 版本 | 构建号前缀 | 关注点 | 优先级 |
+|----------|-----------|--------|--------|
+| 2024.1.x | 241 | 最低支持版本，基础功能验证 | 高 |
+| 2024.3.x | 243 | JSON 模块从平台核心分离为独立 bundled plugin，需确保 JSON 相关功能正常 | 高 |
+| 2025.3.x | 253 | 2025 年最新稳定版 | 中 |
+| 2026.1 | 261 | 最新发布版本，验证前沿兼容性 | 中 |
+
+**每个版本上至少需要验证的核心功能**：
+
+1. 插件能正常加载（不报错）
+2. 快捷键 `Ctrl+Alt+Shift+F` 能打开搜索对话框
+3. JSON 键搜索能返回正确结果
+4. 双击搜索结果能跳转到目标文件
+5. 右键菜单中显示 "Find Key in JSON"
+
+**特别注意**：2024.3+ 版本是一个重要的分界线，因为 JSON 模块在此版本从平台核心中提取为独立的 bundled plugin。如果测试时间有限，至少要在 2024.1.x（旧架构）和 2024.3+（新架构）各测一个版本。
+
+### 5.8 终止测试 IDE
 
 - **正常关闭**: 关闭 IDE 窗口，或 File → Exit
 - **强制终止**: 在运行 Gradle 的终端中按 `Ctrl+C`，然后输入 `Y` 确认
@@ -387,18 +548,24 @@ test-plugin/
 intellijPlatform {
     pluginVerification {
         ides {
-            // 验证当前开发版本
+            // 当前开发基准版本
             ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.7")
-            
-            // 验证较新版本
+            // JSON 模块分离的关键版本
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
+            // 各主要版本
             ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
-            
-            // 验证最新推荐版本（需要网络，会自动获取）
-            // recommended()
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.3")
+            // 最新发布版本
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2026.1")
         }
     }
 }
 ```
+
+`verifyPlugin` 与手动测试（`runIde`）的关系：
+- `verifyPlugin`：**静态分析**，自动检查 API 兼容性、弃用 API 使用、依赖解析等，不需要人工操作
+- `runIde`：**运行时测试**，启动真实 IDE 实例，需要人工操作验证功能是否正常
+- 两者互补：`verifyPlugin` 能发现编译级别的兼容问题，但无法测试运行时行为；`runIde` 可以验证实际体验
 
 ### 6.4 理解验证报告
 
@@ -858,6 +1025,9 @@ myFixture.configureByText("test.json", """{"key": "value"}""")
 | 命令 | 说明 | 注意事项 |
 |------|------|----------|
 | `.\gradlew.bat runIde` | 启动带插件的测试 IDE | 首次运行需下载 IDE (~500MB) |
+| `.\gradlew.bat runIde "-PplatformVersion=2024.3"` | 使用指定 IDE 版本启动 | 首次需下载对应版本 |
+| `.\gradlew.bat runIde "-PplatformVersion=2025.3"` | 使用 2025.3 版本启动 | 2025.3+ 自动使用统一发行版 |
+| `.\gradlew.bat runIde "-PplatformVersion=2026.1"` | 使用最新版本启动 | 首次需下载对应版本 |
 | `.\gradlew.bat runIde --debug-jvm` | 以调试模式启动测试 IDE | 可附加调试器 |
 
 ### A.4 兼容性验证命令
@@ -942,4 +1112,4 @@ build/reports/pluginVerifier/
 
 ---
 
-*最后更新: 2026-01-05*
+*最后更新: 2026-04-02*

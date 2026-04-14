@@ -102,6 +102,7 @@ A JetBrains IDE plugin for quickly finding JSON keys in your project.
 ## 💻 支持的 IDE / Supported IDEs
 
 - IntelliJ IDEA (Community & Ultimate)
+  - 2024.1 - 2026.1 (包括 2024.3+ JSON 模块分离版本)
 - WebStorm
 - PyCharm
 - GoLand

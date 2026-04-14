@@ -6,13 +6,13 @@ import com.intellij.json.psi.JsonFile
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonValue
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 
 data class SearchResult(
     val file: VirtualFile,
@@ -21,10 +21,33 @@ data class SearchResult(
     val lineNumber: Int
 )
 
+data class SearchResultWithTiming(
+    val results: List<SearchResult>,
+    val elapsedTimeMs: Long
+)
+
 class JsonSearchService(private val project: Project) {
     private val LOG = LogUtil.getLogger<JsonSearchService>()
     private val psiManager = PsiManager.getInstance(project)
+    private val projectFileIndex = ProjectFileIndex.getInstance(project)
     private val pathCache = mutableMapOf<String, MutableSet<String>>()
+
+    companion object {
+        internal val EXCLUDED_DIRS = setOf(
+            "node_modules", ".gradle", "build", "dist", "out",
+            ".idea", "target", ".git", "vendor", "packages", "bin"
+        )
+    }
+
+    private fun shouldSearchFile(file: VirtualFile): Boolean {
+        if (!projectFileIndex.isInContent(file)) return false
+        var parent = file.parent
+        while (parent != null) {
+            if (EXCLUDED_DIRS.contains(parent.name)) return false
+            parent = parent.parent
+        }
+        return true
+    }
 
     fun findKey(searchText: String): List<SearchResult> {
         LOG.info("Starting search for key: $searchText")
@@ -34,37 +57,14 @@ class JsonSearchService(private val project: Project) {
             // Parse search path
             val searchParts = searchText.split(".")
             if (searchParts.isEmpty()) {
-                LOG.debug("Empty search path")
                 return emptyList()
             }
-            LOG.debug("Search path parts: ${searchParts.joinToString(", ")}")
 
-            // Find all JSON files in the project
-            val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
-            LOG.info("Found ${jsonFiles.size} JSON files in project")
-
-            // First collect all root properties from JSON files
-            val rootPropertyNames = mutableSetOf<String>()
-            for (jsonFile in jsonFiles) {
-                val psiFile = psiManager.findFile(jsonFile) ?: continue
-                val rootObject = PsiTreeUtil.findChildOfType(psiFile, JsonObject::class.java) ?: continue
-                val rootProperties = PsiTreeUtil.findChildrenOfType(rootObject, JsonProperty::class.java)
-                rootProperties.forEach {
-                    rootPropertyNames.add(it.name)
-                }
-            }
-            LOG.debug("Found root properties across all files: ${rootPropertyNames.joinToString(", ")}")
-
-            // Check if the first part is a root property in any JSON file
-            val firstPart = searchParts[0]
-            if (!rootPropertyNames.contains(firstPart)) {
-                LOG.debug("First part '$firstPart' is not a root property in any file")
-                return emptyList()
-            }
-            LOG.debug("First part '$firstPart' is a valid root property")
+            val allJsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+            val jsonFiles = allJsonFiles.filter { shouldSearchFile(it) }
+            LOG.info("Searching ${jsonFiles.size} JSON files (${allJsonFiles.size} total, ${allJsonFiles.size - jsonFiles.size} excluded)")
 
             for (file in jsonFiles) {
-                LOG.debug("Processing file: ${file.path}")
                 try {
                     val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
                     searchInFile(psiFile, searchParts, results)
@@ -82,10 +82,8 @@ class JsonSearchService(private val project: Project) {
     }
 
     private fun searchInFile(jsonFile: JsonFile, searchParts: List<String>, results: MutableList<SearchResult>) {
-        LOG.debug("Searching in file: ${jsonFile.virtualFile.path}")
         val rootValue = jsonFile.topLevelValue
         if (rootValue !is com.intellij.json.psi.JsonObject) {
-            LOG.debug("Root value is not a JSON object in file: ${jsonFile.virtualFile.path}")
             return
         }
 
@@ -99,7 +97,6 @@ class JsonSearchService(private val project: Project) {
             val property = findPropertyInObject(currentObject, part) ?: return
             val value = property.value
             if (value !is com.intellij.json.psi.JsonObject) {
-                LOG.debug("Property value is not a JSON object at path: $currentPath.$part")
                 return
             }
             currentObject = value
@@ -121,17 +118,10 @@ class JsonSearchService(private val project: Project) {
 
     private fun findPropertyInObject(jsonObject: JsonValue?, propertyName: String): JsonProperty? {
         if (jsonObject !is JsonObject) {
-            LOG.debug("Not a JSON object")
             return null
         }
 
-        // Only get direct child properties, not recursively getting all levels
-        val properties = jsonObject.propertyList
-        LOG.debug("Found ${properties.size} direct properties in object")
-        properties.forEach {
-            LOG.debug("Direct property name: '${it.name}'")
-        }
-        return properties.find { it.name == propertyName }
+        return jsonObject.propertyList.find { it.name == propertyName }
     }
 
     private fun buildPreview(property: JsonProperty): String {
@@ -146,38 +136,56 @@ class JsonSearchService(private val project: Project) {
         return property.containingFile.viewProvider.document?.getLineNumber(property.textOffset)?.plus(1) ?: 0
     }
 
+    fun findKeyWithTiming(searchText: String): SearchResultWithTiming {
+        val startTime = System.currentTimeMillis()
+        val results = findKey(searchText)
+        val elapsedTimeMs = System.currentTimeMillis() - startTime
+        return SearchResultWithTiming(results, elapsedTimeMs)
+    }
+
+    fun invalidateCache() {
+        LOG.info("Invalidating path cache")
+        pathCache.clear()
+    }
+
+    fun isValidRootProperty(propertyName: String): Boolean {
+        return ReadAction.compute<Boolean, Throwable> {
+            val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+            for (file in jsonFiles) {
+                val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
+                val rootObject = psiFile.topLevelValue as? JsonObject ?: continue
+                if (rootObject.propertyList.any { it.name == propertyName }) {
+                    return@compute true
+                }
+            }
+            false
+        }
+    }
+
     fun getSuggestions(partialKey: String): List<String> {
         LOG.info("Getting suggestions for: $partialKey")
 
         if (partialKey.length < 2) {
-            LOG.debug("Partial key too short, returning empty list")
             return emptyList()
         }
 
         try {
-            // Wrap all PSI access operations with ReadAction
-            return ApplicationManager.getApplication().runReadAction<List<String>> {
-                // If it's part of a path, split and search
-                val parts = partialKey.split(".")
-                if (parts.size > 1) {
-                    val parentPath = parts.dropLast(1).joinToString(".")
-                    val lastPart = parts.last()
+            val parts = partialKey.split(".")
+            if (parts.size > 1) {
+                val parentPath = parts.dropLast(1).joinToString(".")
 
-                    // Use cached paths
-                    val cachedPaths = pathCache.getOrPut(parentPath) {
-                        collectPathsForPrefix(parentPath)
-                    }
-
-                    return@runReadAction cachedPaths
-                        .filter { it.startsWith(partialKey, ignoreCase = true) }
-                        .sorted()
+                val cachedPaths = pathCache.getOrPut(parentPath) {
+                    collectPathsForPrefix(parentPath)
                 }
 
-                // If it's a single keyword, return all matching complete paths
-                return@runReadAction pathCache.values.flatten()
-                    .filter { it.contains(partialKey, ignoreCase = true) }
+                return cachedPaths
+                    .filter { it.startsWith(partialKey, ignoreCase = true) }
                     .sorted()
             }
+
+            return pathCache.values.flatten()
+                .filter { it.contains(partialKey, ignoreCase = true) }
+                .sorted()
         } catch (e: Exception) {
             LOG.error("Error getting suggestions", e)
             return emptyList()
@@ -188,17 +196,15 @@ class JsonSearchService(private val project: Project) {
         val paths = mutableSetOf<String>()
         val parts = prefix.split(".")
 
-        // Wrap all PSI access operations with ReadAction
-        ApplicationManager.getApplication().runReadAction {
-            val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
-            for (file in jsonFiles) {
-                try {
-                    val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
-                    val rootValue = psiFile.topLevelValue as? JsonObject ?: continue
-                    collectPathsFromObject(rootValue, "", parts, 0, paths)
-                } catch (e: Exception) {
-                    LOG.error("Error collecting paths from file ${file.path}", e)
-                }
+        val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+        for (file in jsonFiles) {
+            if (!shouldSearchFile(file)) continue
+            try {
+                val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
+                val rootValue = psiFile.topLevelValue as? JsonObject ?: continue
+                collectPathsFromObject(rootValue, "", parts, 0, paths)
+            } catch (e: Exception) {
+                LOG.error("Error collecting paths from file ${file.path}", e)
             }
         }
 

@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew.bat clean:*)",
+      "Bash(./gradlew.bat compileTestKotlin)",
+      "Bash(./gradlew.bat compileTestKotlin --stacktrace)",
+      "Bash(./gradlew.bat test:*)",
+      "Bash(java -version)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"e:\\\\GitHub\\\\JsonPathNavigator\\\\scripts\\\\test-versions.ps1\" -Version \"core\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\test-versions.ps1' -Version 'core' 2>&1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts\\\\test-versions.ps1 -Version core)",
+      "Bash(powershell -Command 'try { & '\\\\''.\\\\scripts\\\\test-versions.ps1'\\\\'' -Version '\\\\''core'\\\\'' } catch { Write-Error $_; exit 1 }')",
+      "Bash(dir \"e:\\\\GitHub\\\\JsonPathNavigator\\\\gradlew.bat\")",
+      "Bash(./gradlew.bat --version)",
+      "Bash(cmd /c \"e:\\\\GitHub\\\\JsonPathNavigator\\\\gradlew.bat --version\")",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\scripts\\\\test-versions.ps1 -Version 'core' 2>&1 | Out-File -FilePath 'test-output.log' -Encoding UTF8; Get-Content 'test-output.log'\")",
+      "Bash(powershell -Command \"Write-Host 'Testing PowerShell execution'; Test-Path '.\\\\gradlew.bat'\")",
+      "Bash(dir \"src\\\\test\\\\kotlin\\\\cc\\\\wenmin92\\\\jsonkeyfinder\\\\performance\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\test-compile-performance.ps1'\")",
+      "Bash(Select-String -Pattern \"\\(BUILD|error|e:|SUCCESS|FAILED\\)\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(./gradlew.bat compileTestKotlin --quiet)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\verify-performance-test.ps1'\")",
+      "Bash(Select-String -Pattern \"\\(Failed|Exception|BUILD\\)\")",
+      "Bash(Select-Object -First 10)",
+      "Bash(Select-String -Pattern \"\\(Failed|Exception|BUILD|SUCCESS\\)\")",
+      "Bash(Select-String -Pattern \"\\(FAILED|ERROR|Exception|No tests found\\)\")",
+      "Bash(Select-String -Pattern \"\\(BUILD|SUCCESS|FAILED\\)\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\fix-performance-test-methods.ps1'\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\test-fixed-performance.ps1'\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(Select-String -Pattern \"\\(BUILD SUCCESS|BUILD FAILED|Tests run:|Exception\\)\")",
+      "Bash(./gradlew.bat compileTestKotlin --info)",
+      "Bash(Select-String -Pattern \"\\(error|ERROR|Exception\\)\")",
+      "Bash(Select-Object -First 50)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& '.\\\\scripts\\\\test-core-versions-simple.ps1'\")",
+      "Bash(./gradlew.bat tasks:*)"
+    ]
+  }
+}
