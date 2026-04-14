@@ -143,6 +143,8 @@ start build/reports/pluginVerifier/
 
 ## 🚨 **兼容性验证**
 
+> 📖 关于 API 兼容性验证的详细说明（验证类型、报告解读、典型案例），请参阅 [API_COMPATIBILITY.md](./API_COMPATIBILITY.md)。
+
 ### 1. **运行兼容性检查**
 
 ```powershell

@@ -106,13 +106,18 @@ dependencies {
 intellijPlatform {
     pluginVerification {
         ides {
-            val pv = project.property("platformVersion") as String
-            ide(resolveIdeType(pv), pv)
-            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
-            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
+            // 与 JetBrains Marketplace 官方验证版本保持一致（正式发布版本，可自动下载）
             // 2025.3+ 使用统一发行版 (IU)，不再有独立的 Community Edition
-            ide(IntelliJPlatformType.IntellijIdeaUltimate, "2025.3")
-            ide(IntelliJPlatformType.IntellijIdeaUltimate, "2026.1")
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.7")
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2.6")
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3.7")
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1.7")
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.6.1")
+            ide(IntelliJPlatformType.IntellijIdeaUltimate, "2025.3.4")
+            // 2026.1.1 为 EAP 版本，不在标准仓库中，无法自动下载。
+            // 若本机已安装该版本，可在 gradle.properties 中设置 verifyLocalIdePath2026
+            // 并取消下方注释来启用本地验证：
+            // local((project.findProperty("verifyLocalIdePath2026") as? String) ?: "")
         }
     }
 }

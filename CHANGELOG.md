@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-04-14
+
+### Fixed
+- **API Compatibility**: Replaced `ReadAction.compute` (deprecated in 2026.1) and `ReadAction.computeCancellable` (experimental in 2024.1–2025.3) with the underlying stable API `Application.runReadAction(ThrowableComputable)`, which carries no deprecation or experimental annotations in either version range
+
 ## [1.0.13] - 2026-04-14
 
 ### Fixed

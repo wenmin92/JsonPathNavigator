@@ -7,7 +7,7 @@ import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonValue
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.vfs.VirtualFile
@@ -153,9 +153,9 @@ class JsonSearchService(private val project: Project) {
         return if (ApplicationManager.getApplication().isReadAccessAllowed) {
             computeIsValidRootProperty(propertyName)
         } else {
-            ReadAction.computeCancellable<Boolean, Throwable> {
+            ApplicationManager.getApplication().runReadAction(ThrowableComputable<Boolean, Throwable> {
                 computeIsValidRootProperty(propertyName)
-            }
+            })
         }
     }
 
