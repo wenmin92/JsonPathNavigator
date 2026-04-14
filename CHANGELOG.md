@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.12] - 2026-04-14
+
+### Fixed
+- **API Compatibility**: Replaced deprecated `ReadAction.compute` with `ReadAction.computeCancellable` to resolve binary compatibility warnings in future IDE releases
+- **API Compatibility**: Removed deprecated `runReadAction` wrapper in `FindJsonKeyAction` (EDT already holds implicit read access)
+
 ## [1.0.11] - 2026-04-13
 
 ### Added
@@ -111,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.0.12]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.12
 [1.0.11]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.11
 [1.0.10]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.10
 [1.0.9]: https://github.com/wenmin92/JsonPathNavigator/releases/tag/v1.0.9

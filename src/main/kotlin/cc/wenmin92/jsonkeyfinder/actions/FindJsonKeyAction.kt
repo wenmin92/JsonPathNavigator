@@ -1,4 +1,4 @@
-﻿package cc.wenmin92.jsonkeyfinder.actions
+package cc.wenmin92.jsonkeyfinder.actions
 
 import cc.wenmin92.jsonkeyfinder.ui.JsonKeyFinderDialog
 import cc.wenmin92.jsonkeyfinder.util.LogUtil
@@ -6,7 +6,6 @@ import com.intellij.json.psi.JsonStringLiteral
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
@@ -42,9 +41,7 @@ class FindJsonKeyAction : AnAction() {
         }
 
         // Get initial search text
-        val initialSearchText = runReadAction {
-            getInitialSearchText(editor, project)
-        }
+        val initialSearchText = getInitialSearchText(editor, project)
         LOG.debug("Initial search text: $initialSearchText")
 
         // Show search dialog

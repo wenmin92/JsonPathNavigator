@@ -149,13 +149,13 @@ class JsonSearchService(private val project: Project) {
     }
 
     fun isValidRootProperty(propertyName: String): Boolean {
-        return ReadAction.compute<Boolean, Throwable> {
+        return ReadAction.computeCancellable<Boolean, Throwable> {
             val jsonFiles = FileTypeIndex.getFiles(JsonFileType.INSTANCE, GlobalSearchScope.projectScope(project))
             for (file in jsonFiles) {
                 val psiFile = psiManager.findFile(file) as? JsonFile ?: continue
                 val rootObject = psiFile.topLevelValue as? JsonObject ?: continue
                 if (rootObject.propertyList.any { it.name == propertyName }) {
-                    return@compute true
+                    return@computeCancellable true
                 }
             }
             false
